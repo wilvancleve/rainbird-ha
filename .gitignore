@@ -1,0 +1,26 @@
+# Captures contain decrypted commands, tokens, and account credentials — never commit.
+captures/
+*.jsonl
+*.mitm
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Editors / OS
+.DS_Store
+.idea/
+.vscode/
+
+# Downloaded APKs / extractions (proprietary, large)
+tmp-apk/
+*.xapk
+*.apk

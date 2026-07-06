@@ -1,0 +1,108 @@
+set_program_days:
+  name: Set program days
+  description: Set which days of the week a program runs (7-char mask, Sun→Sat).
+  fields:
+    program_id:
+      name: Program ID
+      description: Numeric program id (see a Program sensor's attributes).
+      required: true
+      example: 2838141
+      selector:
+        number: { min: 1, mode: box }
+    days:
+      name: Days mask
+      description: 7 characters of 0/1 starting Sunday. 1111111 = daily, 0000000 = off.
+      required: true
+      example: "0101010"
+      selector:
+        text:
+
+set_seasonal_adjust:
+  name: Set seasonal adjust
+  description: Set a program's seasonal (water budget) adjustment percentage.
+  fields:
+    program_id:
+      name: Program ID
+      required: true
+      example: 2838141
+      selector:
+        number: { min: 1, mode: box }
+    percent:
+      name: Percent
+      required: true
+      example: 90
+      selector:
+        number: { min: 0, max: 300, unit_of_measurement: "%", mode: slider }
+
+rename_program:
+  name: Rename program
+  fields:
+    program_id:
+      name: Program ID
+      required: true
+      selector:
+        number: { min: 1, mode: box }
+    name:
+      name: Name
+      required: true
+      example: Front lawn
+      selector:
+        text:
+
+add_start_time:
+  name: Add start time
+  description: Add a daily start time to a program.
+  fields:
+    program_id:
+      name: Program ID
+      required: true
+      selector:
+        number: { min: 1, mode: box }
+    time:
+      name: Time
+      required: true
+      example: "06:30:00"
+      selector:
+        time:
+
+delete_start_time:
+  name: Delete start time
+  description: Remove a start time by its id (see a Program sensor's attributes).
+  fields:
+    program_id:
+      name: Program ID
+      required: true
+      selector:
+        number: { min: 1, mode: box }
+    start_time_id:
+      name: Start time ID
+      required: true
+      selector:
+        number: { min: 1, mode: box }
+
+set_program_stations:
+  name: Set program stations
+  description: Replace a program's watering steps with the given zones and minutes.
+  fields:
+    program_id:
+      name: Program ID
+      required: true
+      selector:
+        number: { min: 1, mode: box }
+    stations:
+      name: Stations
+      description: "List of {terminal, minutes}. minutes 0 skips watering that zone."
+      required: true
+      example: "[{terminal: 1, minutes: 10}, {terminal: 3, minutes: 8}]"
+      selector:
+        object:
+
+clear_program:
+  name: Clear program
+  description: Empty a program — remove all steps and start times and set days off.
+  fields:
+    program_id:
+      name: Program ID
+      required: true
+      selector:
+        number: { min: 1, mode: box }

@@ -1,0 +1,40 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Rain Bird (self-hosted IQ4)",
+        "description": "Sign in with your Rain Bird 2.0 app account. The OAuth client ID and secret are not shipped with this integration — capture your own from the app using the proxy in the project's tools/ folder (see tools/README.md) and paste them below. Home Assistant gets its own login and won't sign your phone out.",
+        "data": {
+          "username": "Email",
+          "password": "Password",
+          "client_id": "OAuth client ID (captured from the app)",
+          "client_secret": "OAuth client secret (captured from the app)"
+        }
+      },
+      "select": {
+        "title": "Select controller",
+        "data": {
+          "satellite_id": "Controller"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "The refresh token was rejected. Get a fresh one and try again.",
+      "cannot_connect": "Could not reach the Rain Bird IQ4 service.",
+      "no_controllers": "No controllers were found on this account."
+    },
+    "abort": {
+      "already_configured": "This controller is already set up."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Options",
+        "data": {
+          "default_minutes": "Default run time (minutes) when a zone is switched on"
+        }
+      }
+    }
+  }
+}
