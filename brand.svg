@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Original water-droplet mark for the rainbird_ha integration (not a Rain Bird logo). -->
+  <path d="M256 44 C256 44 92 250 92 340 C92 434 165 468 256 468 C347 468 420 434 420 340 C420 250 256 44 256 44 Z"
+        fill="#0B8FD6"/>
+  <ellipse cx="196" cy="322" rx="30" ry="48" fill="#ffffff" fill-opacity="0.30"/>
+  <circle cx="330" cy="392" r="20" fill="#ffffff" fill-opacity="0.18"/>
+</svg>
