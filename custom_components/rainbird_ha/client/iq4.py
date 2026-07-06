@@ -383,6 +383,11 @@ class IQ4Client:
         return await self._request("GET", "ProgramStep/GetRunStationStatusForSatellite",
                                    params={"satelliteId": satellite_id})
 
+    async def get_sensors(self, satellite_id: int) -> list[dict[str, Any]]:
+        """All configured sensors (flow, local rain/moisture, ...)."""
+        return await self._request("GET", "Sensor/GetSensors",
+                                   params={"satelliteId": satellite_id}) or []
+
     # ---- controls ----
     async def start_stations(self, station_ids: list[int], seconds: list[int]) -> None:
         if len(station_ids) != len(seconds):

@@ -29,6 +29,9 @@ class ControllerData:
     remain_seconds: int | None = None
     rain_delay: int | None = None
     programs: list[dict] = field(default_factory=list)
+    # Local rain/moisture sensor: True=active/sensing, False=inactive, None=no sensor.
+    sensor_active: bool | None = None
+    sensor_name: str | None = None
 
 
 TICKS_PER_MINUTE = 60 * 10_000_000
@@ -90,6 +93,7 @@ class RainbirdCoordinator(DataUpdateCoordinator[ControllerData]):
             sat = next((s for s in await self.client.get_satellites()
                         if s.id == self.satellite_id), None)
             programs = await self._build_programs(stations)
+            sensors = await self.client.get_sensors(self.satellite_id)
         except IQ4Error as err:
             raise UpdateFailed(f"Error polling IQ4: {err}") from err
         self._data.connected = connected
@@ -98,6 +102,14 @@ class RainbirdCoordinator(DataUpdateCoordinator[ControllerData]):
         self._data.rain_delay = int(raw.get("rainDelay") or 0)
         self._data.power_on = not bool(raw.get("isShutdown"))
         self._data.programs = programs
+        # Local rain/moisture sensor (the controller's on-board sensor input).
+        local = next((s for s in sensors
+                      if s.get("isLocal") and "onOffState" in s), None)
+        if local:
+            self._data.sensor_active = bool(local.get("onOffState"))
+            self._data.sensor_name = local.get("name") or "Sensor"
+        else:
+            self._data.sensor_active = None
         # Active-station truth comes from the realtime stream; keep whatever it set.
         return self._data
 
