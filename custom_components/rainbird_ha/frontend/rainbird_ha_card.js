@@ -74,12 +74,18 @@ class RainbirdHaCard extends HTMLElement {
         rt: (runtimes[prefix] || {})[n] || null,
       });
     }
+    // Moisture sensor id may carry an area prefix (e.g. binary_sensor.outside_<prefix>_moisture_sensor),
+    // so match by prefix + "moisture" rather than an exact id.
+    const moisture = Object.keys(this._hass.states).find(
+      (e) => e.startsWith("binary_sensor.") && e.includes(prefix) && e.includes("moisture"),
+    );
     this._status = {
       conn: `binary_sensor.${prefix}_connectivity`,
       active: `sensor.${prefix}_active_zone`,
       remain: `sensor.${prefix}_time_remaining`,
       rain: `number.${prefix}_rain_delay`,
       power: `switch.${prefix}_controller`,
+      moisture: moisture || null,
     };
     this._programs = Object.keys(this._hass.states)
       .filter((e) => e.startsWith(`sensor.${prefix}_program_`))
@@ -216,6 +222,7 @@ class RainbirdHaCard extends HTMLElement {
       <div class="rb-pills">
         <span class="rb-pill rb-p-conn"><span class="rb-dot"></span><span class="rb-conn-txt"></span></span>
         <span class="rb-pill rb-p-run"></span>
+        <span class="rb-pill rb-p-moist" hidden></span>
         <span class="rb-pill rb-p-rain"></span>
       </div>
       <div class="rb-grid"></div>
@@ -238,6 +245,7 @@ class RainbirdHaCard extends HTMLElement {
       connDot: card.querySelector(".rb-p-conn .rb-dot"),
       connTxt: card.querySelector(".rb-conn-txt"),
       pillRun: card.querySelector(".rb-p-run"),
+      pillMoist: card.querySelector(".rb-p-moist"),
       pillRain: card.querySelector(".rb-p-rain"),
       grid: card.querySelector(".rb-grid"),
       rainVal: card.querySelector(".rb-rain-val"),
@@ -485,6 +493,14 @@ class RainbirdHaCard extends HTMLElement {
     this._els.pillRun.textContent = running
       ? `${running} running`
       : `${this._zones.length} zones idle`;
+    const moist = this._status.moisture && hass.states[this._status.moisture];
+    if (moist && moist.state !== "unavailable") {
+      this._els.pillMoist.hidden = false;
+      this._els.pillMoist.textContent =
+        moist.state === "on" ? "Moisture: wet" : "Moisture: dry";
+    } else {
+      this._els.pillMoist.hidden = true;
+    }
     const rain = this._num(this._status.rain, 0);
     this._els.pillRain.textContent = rain > 0 ? `Rain delay ${rain}d` : "No rain delay";
     this._els.rainVal.textContent = rain;
