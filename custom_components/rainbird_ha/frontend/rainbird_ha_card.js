@@ -527,9 +527,13 @@ class RainbirdHaCard extends HTMLElement {
   }
 }
 
-customElements.define("rainbird-ha-card", RainbirdHaCard);
+// Guard: the module can be evaluated twice (registered card resource + the
+// integration's auto-served extra_js_url); a second define() throws.
+if (!customElements.get("rainbird-ha-card")) {
+  customElements.define("rainbird-ha-card", RainbirdHaCard);
+}
 window.customCards = window.customCards || [];
-window.customCards.push({
+if (!window.customCards.some((c) => c.type === "rainbird-ha-card")) window.customCards.push({
   type: "rainbird-ha-card",
   name: "Rain Bird (self-hosted IQ4) Zones",
   description: "Zone visualization for the rainbird_ha integration.",

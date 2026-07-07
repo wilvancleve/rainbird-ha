@@ -2,7 +2,7 @@
 
 DOMAIN = "rainbird_ha"
 # Keep in sync with manifest.json "version" — used to cache-bust the frontend card.
-VERSION = "1.2.2"
+VERSION = "1.2.3"
 
 # URL the integration serves its bundled Lovelace card at.
 CARD_URL = f"/{DOMAIN}/rainbird_ha_card.js"
