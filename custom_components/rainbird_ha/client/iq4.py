@@ -19,6 +19,7 @@ Endpoints (base https://iq4server.rainbird.com):
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import datetime
 import hashlib
@@ -43,6 +44,7 @@ TOKEN_URL = f"{AUTH_BASE}/connect/token"
 # The 2.0 app's own User-Agent, to blend in with normal traffic / avoid WAF quirks.
 USER_AGENT = "Rain Bird 2.0/1 CFNetwork/3860.700.1 Darwin/25.6.0"
 EXPIRY_MARGIN = 120  # refresh this many seconds before the token actually expires
+TRANSIENT_RETRY_DELAY = 2  # seconds before the single GET retry on 5xx/conn error
 
 # The OAuth client credentials the Rain Bird 2.0 app sends as HTTP Basic auth on
 # the token endpoint are NOT shipped with this project. Capture your own from the
@@ -331,10 +333,20 @@ class IQ4Client:
     async def _request(self, method: str, path: str, *,
                        params: dict[str, Any] | None = None,
                        json_body: Any = None) -> Any:
-        """Authenticated request with one automatic 401 -> refresh -> retry."""
+        """Authenticated request with one automatic 401 -> refresh -> retry.
+
+        Idempotent GETs also get one retry on transient failures (HTTP 5xx or
+        connection errors) -- iq4server intermittently 500s ("transient
+        failure") and brief DNS/WAN blips are common; a single retry absorbs
+        most of them. Writes are never retried on those paths.
+        """
         url = f"{API_BASE}/{path}"
-        for attempt in (1, 2):
-            token = await self._auth.async_access_token(force_refresh=(attempt == 2))
+        may_retry_auth = True
+        may_retry_transient = method == "GET"
+        force_refresh = False
+        while True:
+            token = await self._auth.async_access_token(force_refresh=force_refresh)
+            force_refresh = False
             headers = {
                 "Authorization": f"Bearer {token}",
                 "Accept": "application/json",
@@ -346,18 +358,34 @@ class IQ4Client:
                 async with self._session.request(
                     method, url, params=params, json=json_body, headers=headers,
                 ) as resp:
-                    if resp.status == 401 and attempt == 1:
+                    if resp.status == 401:
+                        if not may_retry_auth:
+                            raise IQ4AuthError(
+                                f"Unauthorized on {method} {path} after token refresh")
+                        may_retry_auth = False
+                        force_refresh = True
                         _LOGGER.info("IQ4 401 on %s; refreshing token and retrying", path)
                         continue
                     text = await resp.text()
+                    if resp.status >= 500 and may_retry_transient:
+                        may_retry_transient = False
+                        _LOGGER.debug("IQ4 HTTP %s on GET %s; retrying once",
+                                      resp.status, path)
+                        await asyncio.sleep(TRANSIENT_RETRY_DELAY)
+                        continue
                     if resp.status not in (200, 201, 204):
                         raise IQ4ApiError(f"{method} {path} -> HTTP {resp.status}: {text[:300]}")
                     if resp.status == 204 or not text:
                         return None
                     return json.loads(text)
             except aiohttp.ClientError as err:
+                if may_retry_transient:
+                    may_retry_transient = False
+                    _LOGGER.debug("Connection error on GET %s (%s); retrying once",
+                                  path, err)
+                    await asyncio.sleep(TRANSIENT_RETRY_DELAY)
+                    continue
                 raise IQ4Error(f"Connection error on {method} {path}: {err}") from err
-        raise IQ4AuthError(f"Unauthorized on {method} {path} after token refresh")
 
     # ---- reads ----
     async def get_satellites(self) -> list[Satellite]:

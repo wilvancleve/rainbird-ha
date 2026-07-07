@@ -37,6 +37,11 @@ class ControllerData:
 TICKS_PER_MINUTE = 60 * 10_000_000
 _DAY_LETTERS = ["Su", "M", "Tu", "W", "Th", "F", "Sa"]
 
+# Consecutive poll failures tolerated (returning last-known data) before
+# entities go unavailable. Brief DNS/WAN blips and iq4server's intermittent
+# HTTP 500s typically clear within a poll cycle or two.
+FAILURE_GRACE = 2
+
 
 def _days_summary(mask: str) -> str:
     """'1111111' -> 'Daily', '0000000' -> 'Off', else e.g. 'M,W,F'."""
@@ -77,6 +82,7 @@ class RainbirdCoordinator(DataUpdateCoordinator[ControllerData]):
         self._stream = IQ4Stream(auth, device_uuid)
         self._stream_task: asyncio.Task | None = None
         self._data = ControllerData()
+        self._poll_failures = 0
         # Per-zone run duration (minutes) used when a zone switch is turned on;
         # maintained by the per-zone "run time" number entities.
         self.zone_minutes: dict[int, int] = {}
@@ -95,7 +101,15 @@ class RainbirdCoordinator(DataUpdateCoordinator[ControllerData]):
             programs = await self._build_programs(stations)
             sensors = await self.client.get_sensors(self.satellite_id)
         except IQ4Error as err:
+            self._poll_failures += 1
+            if self.data is not None and self._poll_failures <= FAILURE_GRACE:
+                _LOGGER.warning(
+                    "Poll failed (%d/%d tolerated), keeping last data: %s",
+                    self._poll_failures, FAILURE_GRACE, err,
+                )
+                return self._data
             raise UpdateFailed(f"Error polling IQ4: {err}") from err
+        self._poll_failures = 0
         self._data.connected = connected
         self._data.stations = stations
         raw = sat.raw if sat else {}
