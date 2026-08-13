@@ -16,15 +16,24 @@
         "data": {
           "satellite_id": "Controller"
         }
+      },
+      "reauth_confirm": {
+        "title": "Rain Bird — re-authenticate",
+        "description": "Your session expired. Sign in again with your Rain Bird 2.0 app email and password to renew it (your saved OAuth client is reused).",
+        "data": {
+          "username": "Email",
+          "password": "Password"
+        }
       }
     },
     "error": {
-      "invalid_auth": "The refresh token was rejected. Get a fresh one and try again.",
+      "invalid_auth": "Sign-in failed — check your email/password (and OAuth client).",
       "cannot_connect": "Could not reach the Rain Bird IQ4 service.",
       "no_controllers": "No controllers were found on this account."
     },
     "abort": {
-      "already_configured": "This controller is already set up."
+      "already_configured": "This controller is already set up.",
+      "reauth_successful": "Re-authentication successful."
     }
   },
   "options": {

@@ -9,10 +9,11 @@ from datetime import timedelta
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import CONF_DEFAULT_MINUTES, DEFAULT_MINUTES, DOMAIN, SCAN_INTERVAL_SECONDS
-from .client.iq4 import IQ4Auth, IQ4Client, IQ4Error, Station
+from .client.iq4 import IQ4Auth, IQ4AuthError, IQ4Client, IQ4Error, Station
 from .client.stream import IQ4Stream, StreamEvent
 
 _LOGGER = logging.getLogger(__name__)
@@ -100,6 +101,9 @@ class RainbirdCoordinator(DataUpdateCoordinator[ControllerData]):
                         if s.id == self.satellite_id), None)
             programs = await self._build_programs(stations)
             sensors = await self.client.get_sensors(self.satellite_id)
+        except IQ4AuthError as err:
+            # Dead/expired refresh token -> prompt reauth (not retry/grace).
+            raise ConfigEntryAuthFailed(f"Authentication failed: {err}") from err
         except IQ4Error as err:
             self._poll_failures += 1
             if self.data is not None and self._poll_failures <= FAILURE_GRACE:

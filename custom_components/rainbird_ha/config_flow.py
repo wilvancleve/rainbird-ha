@@ -8,6 +8,8 @@ of the phone app).
 from __future__ import annotations
 
 import logging
+import os
+from collections.abc import Mapping
 from typing import Any
 
 import voluptuous as vol
@@ -36,6 +38,11 @@ from .client.iq4 import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def _remove_if_exists(path: str) -> None:
+    if os.path.exists(path):
+        os.remove(path)
 
 
 class RainbirdConfigFlow(ConfigFlow, domain=DOMAIN):
@@ -89,6 +96,53 @@ class RainbirdConfigFlow(ConfigFlow, domain=DOMAIN):
         }
         return self.async_show_form(
             step_id="user", data_schema=vol.Schema(fields), errors=errors,
+        )
+
+    async def async_step_reauth(
+        self, entry_data: Mapping[str, Any]
+    ) -> ConfigFlowResult:
+        """Triggered when the stored refresh token is rejected."""
+        return await self.async_step_reauth_confirm()
+
+    async def async_step_reauth_confirm(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Re-mint a refresh token from re-entered email/password.
+
+        Reuses the stored client_id/secret. On success the stale persisted token
+        is removed so the fresh entry token is used.
+        """
+        entry = self._get_reauth_entry()
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            try:
+                auth = await login_with_password(
+                    async_get_clientsession(self.hass),
+                    user_input[CONF_USERNAME].strip(),
+                    user_input[CONF_PASSWORD],
+                    client_id=entry.data[CONF_CLIENT_ID],
+                    client_secret=entry.data[CONF_CLIENT_SECRET],
+                )
+            except IQ4AuthError:
+                errors["base"] = "invalid_auth"
+            except IQ4Error:
+                errors["base"] = "cannot_connect"
+            else:
+                token_path = self.hass.config.path(
+                    f".storage/{DOMAIN}_{entry.data[CONF_SATELLITE_ID]}_token.json"
+                )
+                await self.hass.async_add_executor_job(_remove_if_exists, token_path)
+                return self.async_update_reload_and_abort(
+                    entry,
+                    data={**entry.data, CONF_REFRESH_TOKEN: auth.refresh_token},
+                )
+        return self.async_show_form(
+            step_id="reauth_confirm",
+            data_schema=vol.Schema({
+                vol.Required(CONF_USERNAME): str,
+                vol.Required(CONF_PASSWORD): str,
+            }),
+            errors=errors,
         )
 
     async def async_step_select(

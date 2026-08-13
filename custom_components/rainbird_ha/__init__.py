@@ -12,7 +12,7 @@ from homeassistant.components.http import StaticPathConfig
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
@@ -91,8 +91,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     try:
         await coordinator.async_config_entry_first_refresh()
     except IQ4AuthError as err:
-        # Bad/expired refresh token -> trigger reauth rather than silent failure.
-        raise ConfigEntryNotReady(f"Authentication failed: {err}") from err
+        # Bad/expired refresh token -> prompt the user to re-enter credentials.
+        raise ConfigEntryAuthFailed(f"Authentication failed: {err}") from err
     except IQ4Error as err:
         raise ConfigEntryNotReady(f"Could not reach IQ4 service: {err}") from err
 
