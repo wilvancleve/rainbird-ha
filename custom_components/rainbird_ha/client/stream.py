@@ -73,7 +73,7 @@ class IQ4Stream:
     def _connection_url(self, token: str) -> str:
         header = base64.urlsafe_b64encode(
             json.dumps({"host": API_HOST, "Authorization": f"Bearer {token}"}).encode()
-        ).decode().rstrip("=")
+        ).decode()
         return f"{WS_ENDPOINT}?header={header}&payload=e30="
 
     def _parse(self, msg: dict) -> StreamEvent | None:
